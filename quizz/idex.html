@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Quiz Generator</title>
+    <style>
+        /* Add your CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+        label {
+            display: inline-block;
+            margin-bottom: 5px;
+            margin-right: 20px; /* Add margin between the labels */
+        }
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:active {
+            background-color: #0056b3;
+            transform: translateY(1px);
+        }
+        #quizContainer, #resultContainer {
+            background-color: #f9f9f9;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        #quizContainer {
+            display: none;
+        }
+        #quiz, #score, #feedback {
+            margin-bottom: 20px;
+        }
+        .correct {
+            color: green;
+        }
+        .incorrect {
+            color: red;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dynamic Quiz Generator</h1>
+        <form id="quizForm">
+            <div class="question">
+                <label for="math">Math:</label>
+                <input type="checkbox" id="math" name="topic" value="Math">
+                <label for="science">Science:</label>
+                <input type="checkbox" id="science" name="topic" value="Science">
+                <label for="english">:English</label>
+                <input type="checkbox" id="english" name="topic" value="English">
+                <label for="economics">Economics:</label>
+                <input type="checkbox" id="economics" name="topic" value="Economics">
+                <label for="taxation">Taxation:</label>
+                <input type="checkbox" id="taxation" name="topic" value="Taxation">
+            </div>
+            <div class="question">
+                <label for="difficulty">Select Difficulty:</label><br>
+                <select id="difficulty" name="difficulty">
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                </select>
+            </div>
+            <div class="question">
+                <label for="numQuestions">Number of Questions:</label><br>
+                <input type="number" id="numQuestions" name="numQuestions" min="1" value="5">
+            </div>
+            <button type="button" onclick="generateQuiz()">Generate Quiz</button>
+            
+            <!-- Corrected placement of "Submit Quiz" button within the form -->
+            <div id="quizContainer">
+                <h2>Quiz</h2>
+                <div id="quiz"></div>
+                <button type="button" id="submitQuizBtn" onclick="submitQuiz()">Submit Quiz</button>
+            </div>
+        </form>
+
+        <div id="resultContainer" style="display: none;">
+            <h2>Results</h2>
+            <p id="score"></p>
+            <p id="correctCount"></p> <!-- New paragraph element for displaying correct count -->
+            <div id="feedback"></div>
+        </div>
+    </div>
+
+    <script>
+        // Define your question bank here
+        var questionBank = {
+            'Math': {
+                'Beginner': ['What is 2 + 2?', 'What is the square root of 9?'],
+                'Intermediate': ['Solve for x: 2x + 3 = 11', 'What is the value of π?'],
+                'Advanced': ['What is the derivative of x^2?', 'Solve the equation: 3x^2 + 2x + 1 = 0']
+            },
+            'Science': {
+                'Beginner': ['What is the chemical symbol for water?', 'What is the largest planet in our solar system?'],
+                'Intermediate': ['What is Newton\'s third law of motion?', 'What is the atomic number of carbon?'],
+                'Advanced': ['What is the process of nuclear fusion?', 'Explain the theory of relativity.']
+            },
+            'English': {
+                'Beginner': ['What is a noun?', 'What is a verb?'],
+                'Intermediate': ['What is a simile?', 'What is a metaphor?'],
+                'Advanced': ['What is an oxymoron?', 'What is a hyperbole?']
+            },
+            'Economics': {
+                'Beginner': ['What is supply?', 'What is demand?'],
+                'Intermediate': ['What is inflation?', 'What is unemployment?'],
+                'Advanced': ['What is fiscal policy?', 'What is monetary policy?']
+            },
+            'Taxation': {
+                'Beginner': ['What is income tax?', 'What is sales tax?'],
+                'Intermediate': ['What is value-added tax (VAT)?', 'What is property tax?'],
+                'Advanced': ['What is capital gains tax?', 'What is corporate tax?']
+            }
+        };
+
+        function generateQuiz() {
+            var form = document.getElementById("quizForm");
+            var topics = [];
+            var checkboxes = form.querySelectorAll('input[name="topic"]:checked');
+            checkboxes.forEach(function(checkbox) {
+                topics.push(checkbox.value);
+            });
+            var difficulty = form.elements["difficulty"].value;
+            var numQuestions = parseInt(form.elements["numQuestions"].value);
+
+            var quizContainer = document.getElementById("quizContainer");
+            var quizElement = document.getElementById("quiz");
+            quizElement.innerHTML = "";
+
+            var quiz = [];
+            topics.forEach(function(topic) {
+                for (var i = 0; i < numQuestions / topics.length; i++) {
+                    var questions = questionBank[topic][difficulty];
+                    var randomIndex = Math.floor(Math.random() * questions.length);
+                    quiz.push({ question: questions[randomIndex], answer: "" });
+                }
+            });
+
+            quiz.forEach(function(question, index) {
+                var questionElement = document.createElement("div");
+                questionElement.textContent = (index + 1) + ". " + question.question;
+                var input = document.createElement("input");
+                input.type = "text";
+                input.placeholder = "Enter your answer";
+                questionElement.appendChild(input);
+                quizElement.appendChild(questionElement);
+            });
+
+            quizContainer.style.display = "block";
+            document.getElementById("resultContainer").style.display = "none";
+        }
+
+        function submitQuiz() {
+            var quizContainer = document.getElementById("quizContainer");
+            var resultContainer = document.getElementById("resultContainer");
+            var quizElement = document.getElementById("quiz");
+            var scoreElement = document.getElementById("score");
+            var feedbackElement = document.getElementById("feedback");
+            var correctCountElement = document.getElementById("correctCount"); // New element reference
+
+            var numQuestions = quizElement.children.length;
+            var correctAnswers = 0;
+
+            for (var i = 0; i < numQuestions; i++) {
+                var userAnswer = quizElement.children[i].querySelector("input").value.trim();
+                var correctAnswer = quiz[i].question.split('?')[1].trim(); // Extracting correct answer
+
+                var questionElement = quizElement.children[i];
+                if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
+                    questionElement.classList.add("correct");
+                    correctAnswers++;
+                } else {
+                    questionElement.classList.add("incorrect");
+                }
+            }
+
+            var score = (correc<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Quiz Generator</title>
+    <style>
+        /* Add your CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+        .question {
+            margin-bottom: 10px;
+        }
+        .correct {
+            color: green;
+        }
+        .incorrect {
+            color: red;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:active {
+            background-color: #0056b3;
+            transform: translateY(1px);
+        }
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        #quizContainer,
+        #resultContainer {
+            background-color: #f9f9f9;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        #quizContainer {
+            display: none;
+        }
+        #quiz,
+        #score,
+        #feedback {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dynamic Quiz Generator</h1>
+        <form id="quizForm">
+            <div class="question">
+                <label for="topic">Select Topic:</label><br>
+                <select id="topic" name="topic">
+                    <option value="Math">Math</option>
+                    <option value="English">English</option>
+                    <option value="Science">Science</option>
+                    <option value="Taxation">Taxation</option>
+                    <option value="Biology">Biology</option>
+                </select>
+            </div>
+            <div class="question">
+                <label for="numQuestions">Number of Questions:</label><br>
+                <input type="number" id="numQuestions" name="numQuestions" min="1" value="5">
+            </div>
+            <button type="button" onclick="generateQuiz()">Generate Quiz</button>
+            
+            <!-- Corrected placement of "Submit Quiz" button within the form -->
+            <div id="quizContainer" style="display: none;">
+                <h2>Quiz</h2>
+                <div id="quiz"></div>
+                <button type="submit">Submit Quiz</button>
+            </div>
+        </form>
+
+        <div id="resultContainer" style="display: none;">
+            <h2>Results</h2>
+            <p id="score"></p>
+            <div id="feedback"></div>
+        </div>
+    </div>
+
+    <script>
+        // Define your question bank here
+        var questionBank = {
+            'Math': [
+                { question: 'What is 2 + 2?', answer: '4' },
+                { question: 'What is the square root of 9?', answer: '3' },
+                { question: 'Solve for x: 2x + 3 = 11', answer: '4' },
+                { question: 'What is the value of π?', answer: '3.14159' },
+                { question: 'What is the derivative of x^2?', answer: '2x' },
+                { question: 'Solve the equation: 3x^2 + 2x + 1 = 0', answer: 'No real solution' }
+            ],
+            'Science': [
+                { question: 'What is the chemical symbol for water?', answer: 'H2O' },
+                { question: 'What is the largest planet in our solar system?', answer: 'Jupiter' },
+                { question: 'What is Newton\'s third law of motion?', answer: 'For every action, there is an equal and opposite reaction' },
+                { question: 'What is the atomic number of carbon?', answer: '6' },
+                { question: 'What is the process of nuclear fusion?', answer: 'Combining two light atomic nuclei to form a heavier nucleus' },
+                { question: 'Explain the theory of relativity.', answer: 'A theory proposing the relationship between space and time' }
+            ],
+            'English': [
+                { question: 'What is a noun?', answer: 'A person, place, thing, or idea' },
+                { question: 'What is a verb?', answer: 'A word used to describe an action, state, or occurrence' },
+                { question: 'What is the past tense of "go"?', answer: 'Went' },
+                { question: 'What is an adjective?', answer: 'A word that describes or modifies a noun or pronoun' },
+                { question: 'What is a metaphor?', answer: 'A figure of speech that refers to one thing by mentioning another' },
+                { question: 'What is a simile?', answer: 'A figure of speech that compares two different things using "like" or "as"' }
+            ],
+            'Taxation': [
+                { question: 'What is income tax?', answer: 'A tax imposed on individuals or entities that varies with respective income or profits' },
+                { question: 'What is sales tax?', answer: 'A tax on sales or on the receipts from sales' },
+                { question: 'What is value-added tax (VAT)?', answer: 'A type of consumption tax that is placed on a product whenever value is added at a stage of production or at final sale' },
+                { question: 'What is property tax?', answer: 'A tax assessed on real estate by the local government' },
+                { question: 'What is capital gains tax?', answer: 'A tax levied on the profit from the sale of property or an investment' },
+                { question: 'What is corporate tax?', answer: 'A tax imposed on the net profit of a corporation' }
+            ],
+            'Biology': [
+                { question: 'What is a cell?', answer: 'The basic structural, functional, and biological unit of all known organisms' },
+                { question: 'What is photosynthesis?', answer: 'The process by which green plants and some other organisms use sunlight to synthesize foods with the help of chlorophyll' },
+                { question: 'What is DNA?', answer: 'A molecule that carries the genetic instructions for growth, development, functioning, and reproduction of all known living organisms and many viruses' },
+                { question: 'What is natural selection?', answer: 'The process whereby organisms better adapted to their environment tend to survive and produce more offspring' },
+                { question: 'What is ecology?', answer: 'The branch of biology that deals with the relations of organisms to one another and to their physical surroundings' },
+                { question: 'What is evolution?', answer: 'The process by which different kinds of living organisms are thought to have developed and diversified from earlier forms during the history of the earth' }
+            ]
+        };
+
+        // Define quiz array globally
+        var quiz = [];
+
+        function generateQuiz() {
+            var form = document.getElementById("quizForm");
+            var topic = form.elements["topic"].value;
+            var numQuestions = parseInt(form.elements["numQuestions"].value);
+
+            var quizContainer = document.getElementById("quizContainer");
+            var quizElement = document.getElementById("quiz");
+            quizElement.innerHTML = "";
+
+            quiz = []; // Reset quiz array
+
+            for (var i = 0; i < numQuestions; i++) {
+                var questions = questionBank[topic];
+                var randomIndex = Math.floor(Math.random() * questions.length);
+                quiz.push({ question: questions[randomIndex], answer: "" });
+            }
+
+            quiz.forEach(function(question, index) {
+                var questionElement = document.createElement("div");
+                questionElement.textContent = (index + 1) + ". " + question.question.question;
+                var input = document.createElement("input");
+                input.type = "text";
+                input.placeholder = "Enter your answer";
+                input.addEventListener("input", function(event) {
+                    quiz[index].answer = event.target.value;
+                });
+                questionElement.appendChild(input);
+                quizElement.appendChild(questionElement);
+            });
+
+            quizContainer.style.display = "block";
+            document.getElementById("resultContainer").style.display = "none";
+        }
+
+        // Add event listener for form submission
+        document.getElementById("quizForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent default form submission behavior
+            submitQuiz(); // Call the submitQuiz function
+        });
+
+        function submitQuiz() {
+            var quizContainer = document.getElementById("quizContainer");
+            var resultContainer = document.getElementById("resultContainer");
+            var quizElement = document.getElementById("quiz");
+            var scoreElement = document.getElementById("score");
+            var feedbackElement = document.getElementById("feedback");
+
+            var numQuestions = quizElement.children.length;
+            var correctAnswers = 0;
+            var answeredQuestions = 0; // Track the number of questions the user has answered
+
+            for (var i = 0; i < numQuestions; i++) {
+                var userAnswer = quizElement.children[i].querySelector("input").value.trim();
+                var correctAnswer = quiz[i].answer;
+                var questionText = quiz[i].question.question;
+
+                if (userAnswer !== "") { // Check if the user has provided an answer
+                    answeredQuestions++; // Increment the answeredQuestions count
+                    var questionElement = quizElement.children[i];
+
+                    // Check if the user's answer matches the correct answer
+                    if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
+                        questionElement.classList.add("correct");
+                        correctAnswers++;
+                    } else {
+                        questionElement.classList.add("incorrect");
+                    }
+                }
+            }
+
+            // Calculate the score based on the number of correctly answered questions
+            if (answeredQuestions > 0) {
+                var score = (correctAnswers / numQuestions) * 100;
+                scoreElement.textContent = "Your Score: " + score.toFixed(2) + "%";
+
+                if (score >= 70) {
+                    feedbackElement.textContent = "Congratulations! You passed the quiz.";
+                } else {
+                    feedbackElement.textContent = "Sorry, you did not pass the quiz. Please try again.";
+                }
+            } else {
+                scoreElement.textContent = "Your Score: 0%"; // If no questions were answered
+                feedbackElement.textContent = "You didn't answer any questions. Please try again.";
+            }
+
+            quizContainer.style.display = "none";
+            resultContainer.style.display = "block";
+        }
+    </script>
+</body>
+</html>
+tAnswers / numQuestions) * 100;
+            scoreElement.textContent = "Your Score: " + score.toFixed(2) + "%";
+            correctCountElement.textContent = "Correct Answers: " + correctAnswers + " out of " + numQuestions; // Display correct count
+
+            if (score >= 70) {
+                feedbackElement.textContent = "Congratulations! You passed the quiz.";
+            } else {
+                feedbackElement.textContent = "Sorry, you did not pass the quiz. Please try again.";
+            }
+
+            quizContainer.style.display = "none";
+            resultContainer.style.display = "block";
+        }
+    </script>
+</body>
+</html>
